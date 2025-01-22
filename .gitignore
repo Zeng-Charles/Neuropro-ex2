@@ -19,6 +19,7 @@ Thumbs.db
 # 忽略 Python 虚拟环境目录
 venv/
 ex2/
+__pycache__/
 
 # 忽略 Node.js 依赖目录
 node_modules/
