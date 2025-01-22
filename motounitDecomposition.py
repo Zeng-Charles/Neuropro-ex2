@@ -42,168 +42,224 @@ def convert_to_spike_train(data, firing_indices, emg_len, threshold = 0):
     
     return spike_train
 
-# Load the .mat file
-data = scipy.io.loadmat('/Users/a1/Desktop/EX2/Experimental_data_Raw/GL_10.mat')
+def calculate_firing_frequency(spike_train, fs, window_size_ms = 50):
+    """
+    Calculate the firing frequency of the motor units
+    Parameters:
+    ----------
+    spike_train : ndarray, shape (n_samples, n_units)
+        The spike train.
+    fs : int
+        Sampling frequency.
+    window_size : int(ms)
 
-# Access the variables in the .mat file
-print(data.keys())
+    Returns
+    -------
+    firing_frequency : ndarray
+        The firing frequency of the motor units.
+    """
+    window_size_samples = float(fs) * float(window_size_ms) / 1000.0
+    window_size_samples = int(window_size_samples)
+    firing_frequency = np.convolve(np.sum(spike_train, axis=1), np.ones(window_size_samples), mode='valid') / window_size_ms * 1000
 
-# Extract the variables
-SIG = data['SIG']
-ref_signal = data['ref_signal']
-fsamp = data['fsamp']
-
-print("SIG shape: ", SIG.shape)
-print("ref_signal shape: ", ref_signal.shape)
-print( "fsamp shape: ", fsamp.shape)
-
-# Concatenate all non-empty channels of the EMG signal
-emg_data = np.vstack([channel for row in SIG for channel in row if channel.size > 0])
-print("emg_data shape: ", emg_data.shape)
-
-time = np.arange(emg_data.shape[1]) / fsamp[0, 0]  # Convert samples to time in seconds
-
-# Plot the EMG signal
-# plt.figure(figsize=(10, 20))
-
-# for i in range(10):
-#     plt.subplot(10, 1, i + 1)
-#     plt.plot(time, emg_data[i], label=f'Channel {i + 1}', color=plt.cm.viridis(i / 10))
-#     plt.title(f'Channel {i + 1}', fontsize=10)
-#     plt.xlabel('Time (s)', fontsize=8)
-#     plt.ylabel('Amplitude', fontsize=8)
-#     plt.grid(True)
-#     plt.legend(loc='upper right', fontsize=8)
-
-# plt.tight_layout()
-# plt.show()
-
-#plot the emg signal in same plot
-plt.figure(figsize=(12, 6))
-for i in range(10):
-    plt.plot(time, emg_data[i], label=f'Channel {i + 1}', color=plt.cm.viridis(i / 10))
-plt.title('EMG Signal', fontsize=14)
-plt.xlabel('Time (s)', fontsize=10)
-plt.ylabel('Amplitude', fontsize=10)
-plt.grid(True) 
-plt.legend(loc='upper right', fontsize=10)
-plt.tight_layout()
-
-# plt.savefig('emg_signal_1plot.png') 
-# plt.show()
-
-#Decompose the EMG signal
-a = input("decomposition or load file (0/1): ")
-
-if a == '0':
-    output = decomposition(
-        emg_data,
-        discard=5,
-        R=16,
-        M=64,
-        bandpass=True,
-        lowcut=10,
-        highcut=900,
-        fs=2048,
-        order=6,
-        Tolx=10e-4,
-        contrast_fun=skew,
-        ortho_fun=gram_schmidt,
-        max_iter_sep=10,
-        l=31,
-        sil_pnr=True,
-        thresh=0.9,
-        max_iter_ref=10,
-        random_seed=None,
-        verbose=False
-    )
-
-    # Save the output
-    decomp_GL_10 = output 
-    decomp_GL_10_pkl = open('decomp_GL_10_pkl.obj', 'wb') 
-    pickle.dump(decomp_GL_10, decomp_GL_10_pkl)
-
-elif a == '1':
-
-    # Load the output
-    with open('decomp_GL_10_pkl.obj', 'rb') as f: output = pickle.load(f)
-    decomp_GL_10 = output
-    print("output dictionary keys: ", output.keys())
-
-    
-# Extract the decomposition 
-decomp = decomp_GL_10['B']
-num_units = decomp.shape[1]
-firing_indices = decomp_GL_10['MUPulses']
-print("decomp shape: ", decomp.shape)
-print("num_units: ", num_units)
-print("firing_indices shape: ", firing_indices.shape)
-
-# Convert motor unit pulses to a spike train
-spike_train = convert_to_spike_train(decomp, firing_indices, emg_data.shape[1], threshold=0)
-print("spike_train shape: ", spike_train.shape)
-
-# Plot the motor unit spike train and the force signal
-plt.figure(figsize=(12, 14))
-plt.suptitle('Motor Unit Spike Train', fontsize=14)
-
-for i in range(4):
-    ax1 = plt.subplot(4, 1, i + 1)
-    
-    # left y axis -- spike train
-    ax1.set_ylim(-0.1, 1.3)
-    ax1.step(time, spike_train[:, i], label=f'MU# {i + 1} (Spike)', 
-             color=plt.cm.viridis(i / 5), where='post')
-    ax1.set_xlabel('Time (s)', fontsize=8)
-    ax1.set_ylabel('Spike', fontsize=8, color=plt.cm.viridis(i / 5))
-    ax1.tick_params(axis='y', labelcolor=plt.cm.viridis(i / 5))
-    ax1.grid(True)
-    
-    # right y axis -- force signal
-    ax2 = ax1.twinx()
-    ax2.plot(time, ref_signal[0], label='Force Signal', color='red')
-    ax2.set_ylabel('Force', fontsize=8, color='red')
-    ax2.tick_params(axis='y', labelcolor='red')
-    
-    # set title and legend
-    ax1.set_title(f'MU# {i + 1}', fontsize=10)
-    ax1.legend(loc='upper left', fontsize=8)
-    ax2.legend(loc='upper right', fontsize=8)
-
-plt.tight_layout()
-#plot the force signal
-# plt.subplot(5, 1, 5)
-# plt.plot(time, ref_signal[0], label='force signal', color=plt.cm.viridis(5 / 5))
-# plt.title('Force Signal', fontsize=10)
-# plt.xlabel('Time (s)', fontsize=8)
-# plt.ylabel('Amplitude', fontsize=8)
-# plt.grid(True)
-# plt.legend(loc='upper right', fontsize=8)
-# plt.tight_layout()
-
-plt.savefig('spike_train.png') # Save the plot as an image
-# plt.show()  
+    return firing_frequency
 
 
-###################################################### part 2 ####################################################################
+if __name__ == '__main__':
+    # Load the .mat file
+    data = scipy.io.loadmat('Experimental_data_Raw/GL_10.mat')
 
-#cumulative spike train
+    # Access the variables in the .mat file
+    print(data.keys())
 
-cumulative_spike_train = np.zeros(spike_train.shape)
+    # Extract the variables
+    SIG = data['SIG']
+    ref_signal = data['ref_signal']
+    fsamp = data['fsamp']
+    fsamp = fsamp[0,0]
 
-for i in range(num_units):
-    cumulative_spike_train[:, i] = np.cumsum(spike_train[:, i])
+    print("SIG shape: ", SIG.shape)
+    print("ref_signal shape: ", ref_signal.shape)
+    print("fsamp: ", fsamp)
 
-print("cumulative_spike_train shape: ", cumulative_spike_train.shape)
+    # Concatenate all non-empty channels of the EMG signal
+    emg_data = np.vstack([channel for row in SIG for channel in row if channel.size > 0])
+    print("emg_data shape: ", emg_data.shape)
 
-# Plot the cumulative spike train
-# plt.figure()
-# plt.plot(time, cumulative_spike_train[: , 0], label='MU# 1', color='blue')
-# plt.show()
+    time = np.arange(emg_data.shape[1]) / fsamp # Convert samples to time in seconds
 
-CST = np.sum(cumulative_spike_train, axis=1)
+    # Plot the EMG signal
+    # plt.figure(figsize=(10, 20))
 
-# Plot CST
-plt.figure()
-plt.plot(time, CST, label='CST', color='blue')
-plt.show()
+    # for i in range(10):
+    #     plt.subplot(10, 1, i + 1)
+    #     plt.plot(time, emg_data[i], label=f'Channel {i + 1}', color=plt.cm.viridis(i / 10))
+    #     plt.title(f'Channel {i + 1}', fontsize=10)
+    #     plt.xlabel('Time (s)', fontsize=8)
+    #     plt.ylabel('Amplitude', fontsize=8)
+    #     plt.grid(True)
+    #     plt.legend(loc='upper right', fontsize=8)
+
+    # plt.tight_layout()
+    # plt.show()
+
+    #plot the emg signal in same plot
+    # plt.figure(figsize=(12, 6))
+    # for i in range(10):
+    #     plt.plot(time, emg_data[i], label=f'Channel {i + 1}', color=plt.cm.viridis(i / 10))
+    # plt.title('EMG Signal', fontsize=14)
+    # plt.xlabel('Time (s)', fontsize=10)
+    # plt.ylabel('Amplitude', fontsize=10)
+    # plt.grid(True) 
+    # plt.legend(loc='upper right', fontsize=10)
+    # plt.tight_layout()
+
+    # plt.savefig('emg_signal_1plot.png') 
+    # plt.show()
+
+    #Decompose the EMG signal
+    a = input("decomposition or load file (0/1): ")
+
+    if a == '0':
+        output = decomposition(
+            emg_data,
+            discard=5,
+            R=16,
+            M=64,
+            bandpass=True,
+            lowcut=10,
+            highcut=900,
+            fs=2048,
+            order=6,
+            Tolx=10e-4,
+            contrast_fun=skew,
+            ortho_fun=gram_schmidt,
+            max_iter_sep=10,
+            l=31,
+            sil_pnr=True,
+            thresh=0.9,
+            max_iter_ref=10,
+            random_seed=None,
+            verbose=False
+        )
+
+        # Save the output
+        decomp_GL_10 = output 
+        decomp_GL_10_pkl = open('decomp_GL_10_pkl.obj', 'wb') 
+        pickle.dump(decomp_GL_10, decomp_GL_10_pkl)
+
+    elif a == '1':
+
+        # Load the output
+        with open('decomp_GL_10_pkl.obj', 'rb') as f: output = pickle.load(f)
+        decomp_GL_10 = output
+        print("output dictionary keys: ", output.keys())
+
+        
+    # Extract the decomposition 
+    decomp = decomp_GL_10['B']
+    num_units = decomp.shape[1]
+    firing_indices = decomp_GL_10['MUPulses']
+    print("decomp shape: ", decomp.shape)
+    print("num_units: ", num_units)
+    print("firing_indices shape: ", firing_indices.shape)
+
+    # Convert motor unit pulses to a spike train
+    spike_train = convert_to_spike_train(decomp, firing_indices, emg_data.shape[1], threshold=0)
+    print("spike_train shape: ", spike_train.shape)
+
+    # Plot the motor unit spike train and the force signal
+    # plt.figure(figsize=(12, 14))
+    # plt.suptitle('Motor Unit Spike Train', fontsize=14)
+
+    # for i in range(4):
+    #     ax1 = plt.subplot(4, 1, i + 1)
+        
+    #     # left y axis -- spike train
+    #     ax1.set_ylim(-0.1, 1.3)
+    #     ax1.step(time, spike_train[:, i], label=f'MU# {i + 1} (Spike)', 
+    #              color=plt.cm.viridis(i / 5), where='post')
+    #     ax1.set_xlabel('Time (s)', fontsize=8)
+    #     ax1.set_ylabel('Spike', fontsize=8, color=plt.cm.viridis(i / 5))
+    #     ax1.tick_params(axis='y', labelcolor=plt.cm.viridis(i / 5))
+    #     ax1.grid(True)
+        
+    #     # right y axis -- force signal
+    #     ax2 = ax1.twinx()
+    #     ax2.plot(time, ref_signal[0], label='Force Signal', color='red')
+    #     ax2.set_ylabel('Force', fontsize=8, color='red')
+    #     ax2.tick_params(axis='y', labelcolor='red')
+        
+    #     # set title and legend
+    #     ax1.set_title(f'MU# {i + 1}', fontsize=10)
+    #     ax1.legend(loc='upper left', fontsize=8)
+    #     ax2.legend(loc='upper right', fontsize=8)
+
+    # plt.tight_layout()
+    #plot the force signal
+    # plt.subplot(5, 1, 5)
+    # plt.plot(time, ref_signal[0], label='force signal', color=plt.cm.viridis(5 / 5))
+    # plt.title('Force Signal', fontsize=10)
+    # plt.xlabel('Time (s)', fontsize=8)
+    # plt.ylabel('Amplitude', fontsize=8)
+    # plt.grid(True)
+    # plt.legend(loc='upper right', fontsize=8)
+    # plt.tight_layout()
+
+    # plt.savefig('spike_train.png') # Save the plot as an image
+    # plt.show()  
+
+
+    ###################################################### part 2 ####################################################################
+
+    #cumulative spike train
+
+    cumulative_spike_train = np.zeros(spike_train.shape)
+
+    for i in range(num_units):
+        cumulative_spike_train[:, i] = np.cumsum(spike_train[:, i])
+
+    print("cumulative_spike_train shape: ", cumulative_spike_train.shape)
+
+    # Plot the cumulative spike train
+    # plt.figure()
+    # plt.plot(time, cumulative_spike_train[: , 0], label='MU# 1', color='blue')
+    # plt.show()
+
+    CST = np.sum(cumulative_spike_train, axis=1)
+    print("CST shape: ", CST.shape)
+
+    # Plot CST
+    # plt.figure()
+    # plt.suptitle('Cumulative Spike Train', fontsize=14)
+    # plt.plot(time, CST, label='CST')
+    # plt.xlabel('Time (s)', fontsize=10)
+    # plt.ylabel('CST', fontsize=10)
+    # plt.grid(True)
+    # plt.legend(loc='upper left', fontsize=10)
+    # plt.savefig('CST.png') # Save the plot as an image
+    # plt.show()
+
+    # Calculate the firing frequency of the motor units
+    window_sizes = [50, 100, 200]  # 50 ms, 100 ms, 200 ms
+    firing_frequencies = {}
+
+    plt.figure(figsize=(16, 12))
+    for i, ws in enumerate(window_sizes):
+        firing_frequencies[ws] = calculate_firing_frequency(spike_train, fsamp, window_size_ms=ws)
+
+        # Plot results
+        plt.subplot(3,1,i+1)
+        plt.plot(time[:len(firing_frequencies[ws])], firing_frequencies[ws], label=f"Window Size: {int(ws)} ms",color=plt.cm.viridis(i / 3))
+        plt.xlabel("Time (s)")
+        plt.ylabel("Discharge Frequency (Hz)")
+        plt.title(f"Motor Unit Discharge Frequency ({int(ws)} ms Window)")
+        plt.legend()
+        plt.grid(True)
+    plt.tight_layout()
+    # plt.savefig('firing_frequency.png')
+    # plt.show()
+
+##########################################################################part 3####################################################################
+
+# Spike-Triggers Averaging
