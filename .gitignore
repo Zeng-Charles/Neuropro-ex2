@@ -1,0 +1,27 @@
+# 忽略操作系统生成的文件
+.DS_Store
+Thumbs.db
+
+# 忽略日志文件
+*.log
+
+# 忽略临时文件
+*.tmp
+*.swp
+
+# 忽略编译输出
+/build/
+/dist/
+/*.o
+/*.a
+/*.so
+
+# 忽略 Python 虚拟环境目录
+venv/
+ex2/
+
+# 忽略 Node.js 依赖目录
+node_modules/
+
+# 忽略环境变量文件
+.env
