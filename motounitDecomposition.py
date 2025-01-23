@@ -62,10 +62,16 @@ def calculate_firing_frequency_signal(spike_train, fs, window_size_ms = 50):
     window_size_samples = int(window_size_samples)
     num_samples, num_units = spike_train.shape
     num_windows = num_samples - window_size_samples + 1
-    
-    firing_frequency = np.zeros((num_units, num_windows))
+
+    print("window_size_samples: ", window_size_samples)
+    print("num_windows: ", num_windows)
+
+    firing_frequency = np.zeros((num_units, num_windows), dtype=float)
+
     for i in range(num_units):
-        firing_frequency[i] = np.convolve(spike_train[:, i], np.ones(window_size_samples), mode='valid') / window_size_ms * 1000
+        print(f"calculating firing frequency for # MU{i+1}")
+        conv_result = np.convolve(spike_train[:, i], np.ones(window_size_samples), mode='valid')
+        firing_frequency[i, :] = conv_result / (window_size_ms * 0.001) 
 
     return firing_frequency
 
@@ -320,11 +326,11 @@ if __name__ == '__main__':
 
 
     firing_frequencies_unit = calculate_firing_frequency_signal(spike_train, fsamp, window_size_ms = 50)
-
+    print("firing_frequencies_unit shape: ", firing_frequencies_unit.shape)
     # Plot results
     plt.figure(figsize=(12, 6))
     plt.suptitle('Motor Unit Firing Frequency', fontsize=14)
-    plt.plot(time[:len(firing_frequencies_unit)], firing_frequencies_unit, label="#MU 1 window size 50ms")
+    plt.plot(time[ :firing_frequencies_unit.shape[1]], firing_frequencies_unit[i,:], label="#MU 1 window size 50ms")
     plt.xlabel("Time (s)", fontsize=10)
     plt.ylabel("Firing Frequency (Hz)", fontsize=10)
     plt.grid(True)
