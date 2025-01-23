@@ -29,3 +29,4 @@ node_modules/
 
 # 忽略data
 Experimental_data_Raw/
+data/
