@@ -42,7 +42,34 @@ def convert_to_spike_train(data, firing_indices, emg_len, threshold = 0):
     
     return spike_train
 
-def calculate_firing_frequency(spike_train, fs, window_size_ms = 50):
+def calculate_firing_frequency_signal(spike_train, fs, window_size_ms = 50):
+    """
+    Calculate the firing frequency of the motor units
+    Parameters:
+    ----------
+    spike_train : ndarray, shape (n_samples, n_units)
+        The spike train.
+    fs : int
+        Sampling frequency.
+    window_size_ms : int(ms)
+
+    Returns
+    -------
+    firing_frequency : ndarray
+        The firing frequency of the motor units.
+    """
+    window_size_samples = float(fs) * float(window_size_ms) / 1000.0
+    window_size_samples = int(window_size_samples)
+    num_samples, num_units = spike_train.shape
+    num_windows = num_samples - window_size_samples + 1
+    
+    firing_frequency = np.zeros((num_units, num_windows))
+    for i in range(num_units):
+        firing_frequency[i] = np.convolve(spike_train[:, i], np.ones(window_size_samples), mode='valid') / window_size_ms * 1000
+
+    return firing_frequency
+
+def calculate_firing_frequency_total(spike_train, fs, window_size_ms = 50):
     """
     Calculate the firing frequency of the motor units
     Parameters:
@@ -63,6 +90,37 @@ def calculate_firing_frequency(spike_train, fs, window_size_ms = 50):
     firing_frequency = np.convolve(np.sum(spike_train, axis=1), np.ones(window_size_samples), mode='valid') / window_size_ms * 1000
 
     return firing_frequency
+
+def calculate_spike_triggered_average(spike_train, fs, window_size_ms = 50):
+    """
+    Calculate the spike-triggered average of the EMG signal
+    Parameters:
+    ----------
+    spike_train : ndarray, shape (n_samples, n_units)
+        The spike train.
+    fs : int
+        Sampling frequency.
+    window_size : int(ms)
+
+    Returns
+    -------
+    sta : ndarray
+        The spike-triggered average of the EMG signal.
+    """
+    window_size_samples = float(fs) * float(window_size_ms) / 1000.0
+    window_size_samples = int(window_size_samples)
+    num_units = spike_train.shape[1]
+    sta = np.zeros((window_size_samples, num_units))
+
+    for i in range(num_units):
+        indices = np.where(spike_train[:, i] == 1)[0]
+        for idx in indices:
+            if idx + window_size_samples < len(spike_train):
+                sta += spike_train[idx:idx+window_size_samples, :]
+
+    sta /= len(indices)
+
+    return sta
 
 
 if __name__ == '__main__':
@@ -241,24 +299,39 @@ if __name__ == '__main__':
     # plt.show()
 
     # Calculate the firing frequency of the motor units
-    window_sizes = [50, 100, 200]  # 50 ms, 100 ms, 200 ms
-    firing_frequencies = {}
+    # window_sizes = [50, 100, 200]  # 50 ms, 100 ms, 200 ms
+    # firing_frequencies = {}
 
-    plt.figure(figsize=(16, 12))
-    for i, ws in enumerate(window_sizes):
-        firing_frequencies[ws] = calculate_firing_frequency(spike_train, fsamp, window_size_ms=ws)
+    # plt.figure(figsize=(16, 12))
+    # for i, ws in enumerate(window_sizes):
+    #     firing_frequencies[ws] = calculate_firing_frequency_total(spike_train, fsamp, window_size_ms=ws)
 
-        # Plot results
-        plt.subplot(3,1,i+1)
-        plt.plot(time[:len(firing_frequencies[ws])], firing_frequencies[ws], label=f"Window Size: {int(ws)} ms",color=plt.cm.viridis(i / 3))
-        plt.xlabel("Time (s)")
-        plt.ylabel("Discharge Frequency (Hz)")
-        plt.title(f"Motor Unit Discharge Frequency ({int(ws)} ms Window)")
-        plt.legend()
-        plt.grid(True)
-    plt.tight_layout()
+    #     # Plot results
+    #     plt.subplot(3,1,i+1)
+    #     plt.plot(time[:len(firing_frequencies[ws])], firing_frequencies[ws], label=f"Window Size: {int(ws)} ms",color=plt.cm.viridis(i / 3))
+    #     plt.xlabel("Time (s)")
+    #     plt.ylabel("Firing Frequency (Hz)")
+    #     plt.title(f"Motor Unit Firing Frequency ({int(ws)} ms Window)")
+    #     plt.legend()
+    #     plt.grid(True)
+    # plt.tight_layout()
     # plt.savefig('firing_frequency.png')
     # plt.show()
+
+
+    firing_frequencies_unit = calculate_firing_frequency_signal(spike_train, fsamp, window_size_ms = 50)
+
+    # Plot results
+    plt.figure(figsize=(12, 6))
+    plt.suptitle('Motor Unit Firing Frequency', fontsize=14)
+    plt.plot(time[:len(firing_frequencies_unit)], firing_frequencies_unit, label="#MU 1 window size 50ms")
+    plt.xlabel("Time (s)", fontsize=10)
+    plt.ylabel("Firing Frequency (Hz)", fontsize=10)
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
 
 ##########################################################################part 3####################################################################
 
