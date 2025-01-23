@@ -131,7 +131,7 @@ def calculate_spike_triggered_average(spike_train, fs, window_size_ms = 50):
 
 if __name__ == '__main__':
     # Load the .mat file
-    data = scipy.io.loadmat('Experimental_data_Raw/GL_10.mat')
+    data = scipy.io.loadmat('Experimental_data_Raw/GM_10.mat')
 
     # Access the variables in the .mat file
     print(data.keys())
@@ -185,45 +185,25 @@ if __name__ == '__main__':
     a = input("decomposition or load file (0/1): ")
 
     if a == '0':
-        output = decomposition(
-            emg_data,
-            discard=5,
-            R=16,
-            M=64,
-            bandpass=True,
-            lowcut=10,
-            highcut=900,
-            fs=2048,
-            order=6,
-            Tolx=10e-4,
-            contrast_fun=skew,
-            ortho_fun=gram_schmidt,
-            max_iter_sep=10,
-            l=31,
-            sil_pnr=True,
-            thresh=0.9,
-            max_iter_ref=10,
-            random_seed=None,
-            verbose=False
-        )
+        output = decomposition(emg_data, fs=fsamp)
 
         # Save the output
-        decomp_GL_10 = output 
-        decomp_GL_10_pkl = open('decomp_GL_10_pkl.obj', 'wb') 
-        pickle.dump(decomp_GL_10, decomp_GL_10_pkl)
+        decomp_GM_10 = output 
+        decomp_GM_10_pkl = open('decomp_GM_10_pkl.obj', 'wb') 
+        pickle.dump(decomp_GM_10, decomp_GM_10_pkl)
 
     elif a == '1':
 
         # Load the output
-        with open('decomp_GL_10_pkl.obj', 'rb') as f: output = pickle.load(f)
-        decomp_GL_10 = output
+        with open('decomp_GM_10_pkl.obj', 'rb') as f: output = pickle.load(f)
+        decomp_GM_10 = output
         print("output dictionary keys: ", output.keys())
 
         
     # Extract the decomposition 
-    decomp = decomp_GL_10['B']
+    decomp = decomp_GM_10['B']
     num_units = decomp.shape[1]
-    firing_indices = decomp_GL_10['MUPulses']
+    firing_indices = decomp_GM_10['MUPulses']
     print("decomp shape: ", decomp.shape)
     print("num_units: ", num_units)
     print("firing_indices shape: ", firing_indices.shape)
@@ -273,7 +253,6 @@ if __name__ == '__main__':
     # plt.savefig('spike_train.png') # Save the plot as an image
     # plt.show()  
 
-
     ###################################################### part 2 ####################################################################
 
     #cumulative spike train
@@ -306,36 +285,38 @@ if __name__ == '__main__':
 
     # Calculate the firing frequency of the motor units
     # window_sizes = [50, 100, 200]  # 50 ms, 100 ms, 200 ms
-    # firing_frequencies = {}
+    # firing_frequencies_total = {}
 
     # plt.figure(figsize=(16, 12))
     # for i, ws in enumerate(window_sizes):
-    #     firing_frequencies[ws] = calculate_firing_frequency_total(spike_train, fsamp, window_size_ms=ws)
+    #     firing_frequencies_total[ws] = calculate_firing_frequency_total(spike_train, fsamp, window_size_ms=ws)
 
     #     # Plot results
     #     plt.subplot(3,1,i+1)
-    #     plt.plot(time[:len(firing_frequencies[ws])], firing_frequencies[ws], label=f"Window Size: {int(ws)} ms",color=plt.cm.viridis(i / 3))
+    #     plt.suptitle('Total Firing Frequency', fontsize=14)
+    #     plt.plot(time[:len(firing_frequencies_total[ws])], firing_frequencies_total[ws], label=f"Window Size: {int(ws)} ms",color=plt.cm.viridis(i / 3))
     #     plt.xlabel("Time (s)")
     #     plt.ylabel("Firing Frequency (Hz)")
-    #     plt.title(f"Motor Unit Firing Frequency ({int(ws)} ms Window)")
+    #     plt.title(f"Firing Frequency ({int(ws)} ms Window)")
     #     plt.legend()
     #     plt.grid(True)
     # plt.tight_layout()
-    # plt.savefig('firing_frequency.png')
-    # plt.show()
+    # plt.savefig('firing_frequency_total.png')
 
-
-    firing_frequencies_unit = calculate_firing_frequency_signal(spike_train, fsamp, window_size_ms = 50)
+    window_size_ms = 50
+    index_motor_unit = 0
+    firing_frequencies_unit = calculate_firing_frequency_signal(spike_train, fsamp, window_size_ms)
     print("firing_frequencies_unit shape: ", firing_frequencies_unit.shape)
     # Plot results
-    plt.figure(figsize=(12, 6))
-    plt.suptitle('Motor Unit Firing Frequency', fontsize=14)
-    plt.plot(time[ :firing_frequencies_unit.shape[1]], firing_frequencies_unit[i,:], label="#MU 1 window size 50ms")
-    plt.xlabel("Time (s)", fontsize=10)
-    plt.ylabel("Firing Frequency (Hz)", fontsize=10)
-    plt.grid(True)
-    plt.legend()
-    plt.show()
+    # plt.figure(figsize=(12, 6))
+    # plt.suptitle(f'#MU{index_motor_unit + 1} Firing Frequency', fontsize=14)
+    # plt.plot(time[ :firing_frequencies_unit.shape[1]], firing_frequencies_unit[index_motor_unit,:], label=f"#MU{index_motor_unit+1}, window size ms{window_size_ms}")
+    # plt.xlabel("Time (s)", fontsize=10)
+    # plt.ylabel("Firing Frequency (Hz)", fontsize=10)
+    # plt.grid(True)
+    # plt.legend()
+    # plt.savefig('firing_frequency_unit.png')
+    # plt.show()
 
 
 
