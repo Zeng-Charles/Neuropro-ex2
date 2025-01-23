@@ -94,13 +94,15 @@ def calculate_firing_frequency_total(spike_train, fs, window_size_ms = 50):
 
     return firing_frequency
 
-def calculate_spike_triggered_average(spike_train, fs, window_size_ms = 50):
+def calculate_spike_triggered_average(emg_channel, spike_index, fs, window_size_ms = 50):
     """
-    Calculate the spike-triggered average of the EMG signal
+    Calculate the spike triggered average
     Parameters:
     ----------
-    spike_train : ndarray, shape (n_samples, n_units)
-        The spike train.
+    emg_channel : 1darray, shape (n_samples,)
+        The EMG signal.
+    spike_index : 1darray, shape (num_spike,)
+        The spike indices.
     fs : int
         Sampling frequency.
     window_size : int(ms)
@@ -108,23 +110,27 @@ def calculate_spike_triggered_average(spike_train, fs, window_size_ms = 50):
     Returns
     -------
     sta : ndarray
-        The spike-triggered average of the EMG signal.
+        The spike triggered average.
     """
     window_size_samples = float(fs) * float(window_size_ms) / 1000.0
     window_size_samples = int(window_size_samples)
-    num_units = spike_train.shape[1]
-    sta = np.zeros((window_size_samples, num_units))
+    num_samples = len(emg_channel)
 
-    for i in range(num_units):
-        indices = np.where(spike_train[:, i] == 1)[0]
-        for idx in indices:
-            if idx + window_size_samples < len(spike_train):
-                sta += spike_train[idx:idx+window_size_samples, :]
+    sta = np.zeros(2 * window_size_samples)
 
-    sta /= len(indices)
+    for spike in spike_index:
+        start = spike - window_size_samples
+        end = spike + window_size_samples
+
+        if start >= 0 and end < num_samples:
+            sta += emg_channel[start:end]
+        else:
+            continue
+
+    sta /= len(spike_index)
 
     return sta
-
+   
 
 def plot_MU_spike_trian_with_force(ref_signal, time, spike_train, save=False):
     plt.figure(figsize=(20, 12))
@@ -229,6 +235,70 @@ def plot_motor_unit_firing_frequency(time,index_motor_unit, firing_frequencies_u
         plt.savefig(f'firing_frequency_unit #MU{index_motor_unit} {window_size_ms}ms.png')
     plt.show()
 
+def plot_spike_triggered_average(sta_dict, window_sizes, save=False, filename='sta_channel1_4window size.png'):
+    '''
+    Plot the spike triggered average for one chnnel with different window sizes
+
+    Parameters:
+    ----------
+    sta_dict : dict
+        The spike triggered average for one channel.
+    window_sizes : list
+        The window sizes.
+    save : bool
+        Save the plot.
+    filename : str
+        The filename to save the plot.
+
+    Returns:
+    -------
+    None
+    '''
+    plt.figure(figsize=(10, 8))
+
+    for i, ws in enumerate(window_sizes):
+        plt.subplot(len(window_sizes), 1, i + 1)
+        plt.suptitle('Spike-Triggered Average', fontsize=14)
+        plt.plot(sta_dict[ws], label=f'Window Size {ws} ms')
+        plt.title(f'Window Size {ws} ms')
+        plt.xlabel('Time (samples)')
+        plt.ylabel('Amplitude')
+        plt.legend(loc='upper right')
+    
+    plt.tight_layout()
+    if save:
+        plt.savefig(filename)
+    plt.show()
+
+def plot_STA_all_channels(emg_data, sta_dict_21, save=False, filename='sta_all_channels.png'):
+    '''
+    Plot the spike triggered average for all channels
+    
+    Parameters:
+    ----------
+    emg_data : ndarray, shape (n_channels, n_samples)
+        The EMG signal.
+    sta_dict_21 : dict
+        The spike triggered average for all channels.
+    save : bool
+        Save the plot.
+    filename : str
+        The filename to save the plot.
+
+    Returns:
+    -------
+    None
+    '''
+    plt.figure(figsize=(16, 9))
+    for i in range(len(emg_data)):
+        plt.subplot(len(emg_data)//4, 4, i + 1)
+        plt.plot(sta_dict_21[(i, 25)], label=f'Channel {i + 1}')
+        plt.axis('off')
+    plt.tight_layout()
+    if save:
+        plt.savefig(filename)
+    plt.show()
+
 if __name__ == '__main__':
     # Load the .mat file
     data = scipy.io.loadmat('data/GM_10.mat')
@@ -253,10 +323,10 @@ if __name__ == '__main__':
     time = np.arange(emg_data.shape[1]) / fsamp # Convert samples to time in seconds
 
     # Plot the EMG signal
-    plot_emg_channels(emg_data, time, first_n_channels=10, save=False)
+    # plot_emg_channels(emg_data, time, first_n_channels=10, save=False)
 
     # plot the emg signal in same plot
-    plot_emg_signals_in1polt(emg_data, time, first_n_channels=10, save=False)
+    # plot_emg_signals_in1polt(emg_data, time, first_n_channels=10, save=False)
 
     ###################################################### Decomposition ####################################################################
     #Decompose the EMG signal
@@ -294,7 +364,7 @@ if __name__ == '__main__':
     print("spike_train shape: ", spike_train.shape)
 
     # Plot the motor unit spike train and the force signal
-    plot_MU_spike_trian_with_force(ref_signal, time, spike_train)  
+    # plot_MU_spike_trian_with_force(ref_signal, time, spike_train)  
 
     ###################################################### cumlative spike train ####################################################################
 
@@ -309,24 +379,56 @@ if __name__ == '__main__':
     print("CST shape: ", CST.shape)
 
     # Plot CST
-    plot_cumulative_spike_train(time, CST, save=True)
+    # plot_cumulative_spike_train(time, CST, save=True)
 
     # Calculate the firing frequency total
     window_sizes = [50, 100, 200]
     firing_frequencies_total = [calculate_firing_frequency_total(spike_train, fsamp, window_size_ms = ws) for ws in window_sizes]
     #plot the firing frequency total
-    for i, ws in enumerate(window_sizes):
-        plot_firing_frequency_total(firing_frequencies_total[i], time, window_size=ws, save=False)
+    # for i, ws in enumerate(window_sizes):
+    #     plot_firing_frequency_total(firing_frequencies_total[i], time, window_size=ws, save=False)
 
     # Calculate the firing frequency of the each motor units
     firing_frequencies_unit = calculate_firing_frequency_signal(spike_train, fsamp, window_size_ms = 50)
     print("firing_frequencies_unit shape: ", firing_frequencies_unit.shape)
     # Plot the firing frequency of the motor unit
     index_motor_unit = 1
-    plot_motor_unit_firing_frequency(time, index_motor_unit, firing_frequencies_unit, window_size_ms=50, save=False)
+    # plot_motor_unit_firing_frequency(time, index_motor_unit, firing_frequencies_unit, window_size_ms=50, save=False)
 
 
 
-##########################################################################part 3####################################################################
+##########################################################################Spike-Triggers Averaging####################################################################
 
-# Spike-Triggers Averaging
+    # Spike-Triggers Averaging
+    emg_channel1 = emg_data[0]
+    window_sizes = [15, 25, 50, 100]
+
+    sta_dict = {}
+
+    for ws in window_sizes:
+        sta = calculate_spike_triggered_average(emg_channel1, firing_indices[0], fsamp, window_size_ms=ws)
+        sta_dict[ws] = sta
+
+    # Plot the spike triggered average
+    # plot_spike_triggered_average(sta_dict,window_sizes, save=False, filename='sta_channel1_4window size.png')
+
+    # spike triggered average for all channels for neuron 21, 41
+    firing_index_21 = firing_indices[20]
+    firing_index_41 = firing_indices[40]
+
+    window_sizes = [25]
+    sta_dict_21 = {}
+    sta_dict_41 = {}
+
+    for i, channel in enumerate(emg_data):
+        for ws in window_sizes:
+            sta_21 = calculate_spike_triggered_average(channel, firing_index_21, fsamp, window_size_ms=ws)
+            sta_41 = calculate_spike_triggered_average(channel, firing_index_41, fsamp, window_size_ms=ws)
+            sta_dict_21[(i,ws)] = sta_21
+            sta_dict_41[(i,ws)] = sta_41
+    
+    # Plot the spike triggered average for all channels
+    plot_STA_all_channels(emg_data, sta_dict_21, save=True, filename='sta_21.png')
+    plot_STA_all_channels(emg_data, sta_dict_41, save=True, filename='sta_41.png')
+    
+    
