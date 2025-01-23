@@ -26,3 +26,6 @@ node_modules/
 
 # 忽略环境变量文件
 .env
+
+# 忽略data
+Experimental_data_Raw/
