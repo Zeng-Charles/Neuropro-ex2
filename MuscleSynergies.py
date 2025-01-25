@@ -173,12 +173,14 @@ def Run_NMF_different_components(data, components=[]):
 
     for i in components:
         print (f'Running NMF with {i} components')
+
         W_i, H_i, reconstructed = Non_negative_Matrix_Factorization(data, i)
         W.append(W_i)
         H.append(H_i)
         reconstructions.append(reconstructed)
         r2_NMF[i - 1, :] = compute_r2(emg_signal, reconstructed)
         r2_NMF_mean[i - 1] = np.mean(r2_NMF[i - 1, :])
+
         print(f'R2_NMF mean for {i} components: {r2_NMF_mean[i - 1]:.4f}')
 
     return W, H, reconstructions, r2_NMF, r2_NMF_mean
@@ -328,7 +330,21 @@ if __name__ == "__main__":
     W, H, reconstructions, r2_NMF, r2_NMF_mean = Run_NMF_different_components(emg_signal, components)
 
     #plot R2 values
-    plot_r2_nmf_values(r2_NMF_mean, components, save=False, file_name = 'r2_NMF_values.png')
+    # plot_r2_nmf_values(r2_NMF_mean, components, save=False, file_name = 'r2_NMF_values.png')
 
+    #plot first channel of original and reconstructed EMG signal using 1, 3, and 15 factors
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+    plt.figure(figsize=(16, 9))
+    plt.suptitle(f"Original vs Reconstructed EMG signal", fontsize=16)
+    plt.plot(time[0:500], emg_signal[0:500, 0], label = "Original EMG signal", color = colors[0])
+    for idx, i in enumerate([1, 3, 15]):
+        plt.plot(time[0:500], reconstructions[i-1][0:500, 0], label = f"{i} components", color = colors[idx+1])
+    plt.xlabel('Time (s)')
+    plt.ylabel('Amplitude')
+    plt.legend(loc='upper right')
+    plt.savefig('origin_vs_reconstructed.png')
+    plt.show()
+
+        
 
 
