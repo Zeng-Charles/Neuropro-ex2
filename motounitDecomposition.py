@@ -270,7 +270,7 @@ def plot_spike_triggered_average(sta_dict, window_sizes, save=False, filename='s
         plt.savefig(filename)
     plt.show()
 
-def plot_STA_all_channels(emg_data, sta_dict_21, save=False, filename='sta_all_channels.png'):
+def plot_STA_all_channels(emg_data, sta_dict, save=False, filename='sta_all_channels.png'):
     '''
     Plot the spike triggered average for all channels
     
@@ -289,11 +289,40 @@ def plot_STA_all_channels(emg_data, sta_dict_21, save=False, filename='sta_all_c
     -------
     None
     '''
-    plt.figure(figsize=(16, 9))
+    n_rows_total = 13
+    n_cols_total = 5
+
+    plt.figure(figsize=(20, 30))
+
     for i in range(len(emg_data)):
-        plt.subplot(len(emg_data)//4, 4, i + 1)
-        plt.plot(sta_dict_21[(i, 25)], label=f'Channel {i + 1}')
+        # 计算当前子图的行和列（从右到左，列优先）
+        if i < 12:
+            # 第5列（最右侧列），从第2行开始填充（跳过右上角）
+            subplot_col = 5
+            subplot_row = i + 2  # 行范围：2~13
+        elif i < 12 + 13:
+            # 第4列，从第1行开始填充
+            subplot_col = 4
+            subplot_row = (i - 12) + 1  # 行范围：1~13
+        elif i < 12 + 13 * 2:
+            # 第3列
+            subplot_col = 3
+            subplot_row = (i - 12 - 13) + 1
+        elif i < 12 + 13 * 3:
+            # 第2列
+            subplot_col = 2
+            subplot_row = (i - 12 - 13 * 2) + 1
+        else:
+            # 第1列（最左侧列）
+            subplot_col = 1
+            subplot_row = (i - 12 - 13 * 3) + 1
+
+        # 计算子图索引（Matplotlib从1开始）
+        index = (subplot_row - 1) * n_cols_total + subplot_col
+        plt.subplot(n_rows_total, n_cols_total, index)
+        plt.plot(sta_dict[(i, 25)], label=f'Channel {i + 1}')
         plt.axis('off')
+
     plt.tight_layout()
     if save:
         plt.savefig(filename)
