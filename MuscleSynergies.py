@@ -228,7 +228,7 @@ def plot_W(W, save=False, file_name = None):
     plt.suptitle("Weight of channels", fontsize=16)
     for i in range (W.shape[1]):
         plt.subplot(W.shape[1],1,i+1)
-        plt.plot(W[:, i], label = f"Component #{i+1}", color = plt.cm.viridis(i/W.shape[1]))
+        plt.bar(range(W.shape[0]), W[:, i], label=f"Component #{i+1}", color=plt.cm.viridis(i/W.shape[1]))
         plt.title(f"Component {i+1}")
         plt.xlabel('Time (s)')
         plt.ylabel('Amplitude')
@@ -342,7 +342,7 @@ if __name__ == "__main__":
     plt.xlabel('Time (s)')
     plt.ylabel('Amplitude')
     plt.legend(loc='upper right')
-    plt.savefig('origin_vs_reconstructed.png')
+    # plt.savefig('origin_vs_reconstructed.png')
     plt.show()
 
         

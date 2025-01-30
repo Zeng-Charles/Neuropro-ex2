@@ -292,7 +292,7 @@ def plot_STA_all_channels(emg_data, sta_dict, save=False, filename='sta_all_chan
     n_rows_total = 13
     n_cols_total = 5
 
-    plt.figure(figsize=(20, 30))
+    plt.figure(figsize=(10, 10))
 
     for i in range(len(emg_data)):
         # 计算当前子图的行和列（从右到左，列优先）
